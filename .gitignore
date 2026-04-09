@@ -1,0 +1,128 @@
+# =========================
+
+# 🔐 Environment variables
+
+# =========================
+
+.env
+.env.*
+*.env
+
+# =========================
+
+# 🐍 Python / FastAPI
+
+# =========================
+
+**pycache**/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+
+venv/
+.env/
+.venv/
+ENV/
+env/
+
+# Python build files
+
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Logs
+
+*.log
+
+# =========================
+
+# ⚛️ React (TypeScript)
+
+# =========================
+
+node_modules/
+build/
+dist/
+coverage/
+
+# Vite / CRA specific
+
+.vite/
+.next/
+out/
+
+# TypeScript
+
+*.tsbuildinfo
+
+# =========================
+
+# 🧪 Testing
+
+# =========================
+
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# =========================
+
+# 🧰 IDE / Editor
+
+# =========================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+
+# 🖥️ OS files
+
+# =========================
+
+.DS_Store
+Thumbs.db
+
+# =========================
+
+# 📦 Misc
+
+# =========================
+
+*.sqlite3
+*.db
+
+# =========================
+
+# 🔑 Secrets / keys
+
+# =========================
+
+*.pem
+*.key
+*.crt
+
+# =========================
+
+# 🚀 Deployment
+
+# =========================
+
+.render
+.vercel
+.netlify
+
+# =========================
+
+# 📁 Optional uploads
+
+# =========================
+
+uploads/
+media/

@@ -1,0 +1,52 @@
+[
+  {
+    "role": "Software Developer",
+    "skills": ["Java", "JavaScript", "React", "Node.js", "DSA", "Git", "Python", "TypeScript", "REST API", "Agile", "SQL", "MongoDB", "Docker", "CI/CD", "Unit Testing"],
+    "sections": ["Education", "Skills", "Experience", "Projects"]
+  },
+  {
+    "role": "Data Analyst",
+    "skills": ["Python", "SQL", "Excel", "Tableau", "Statistics", "R", "Power BI", "Data Visualization", "Pandas", "NumPy", "Machine Learning", "ETL", "Data Cleaning", "A/B Testing"],
+    "sections": ["Education", "Skills", "Experience", "Certifications"]
+  },
+  {
+    "role": "Frontend Developer",
+    "skills": ["HTML", "CSS", "JavaScript", "React", "TypeScript", "Tailwind", "Redux", "Next.js", "Figma", "Responsive Design", "Git", "REST API", "GraphQL", "Accessibility", "Performance"],
+    "sections": ["Education", "Skills", "Experience", "Projects"]
+  },
+  {
+    "role": "Backend Developer",
+    "skills": ["Node.js", "Python", "Java", "SQL", "MongoDB", "REST API", "GraphQL", "Docker", "AWS", "Microservices", "Redis", "PostgreSQL", "CI/CD", "Git", "Authentication"],
+    "sections": ["Education", "Skills", "Experience", "Projects"]
+  },
+  {
+    "role": "DevOps Engineer",
+    "skills": ["Docker", "Kubernetes", "AWS", "CI/CD", "Terraform", "Linux", "Jenkins", "Ansible", "Git", "Monitoring", "Python", "Bash", "Nginx", "CloudFormation", "Security"],
+    "sections": ["Education", "Skills", "Experience", "Certifications"]
+  },
+  {
+    "role": "Machine Learning Engineer",
+    "skills": ["Python", "TensorFlow", "PyTorch", "Scikit-learn", "Deep Learning", "NLP", "Computer Vision", "Statistics", "SQL", "Docker", "MLOps", "Feature Engineering", "NumPy", "Pandas", "Git"],
+    "sections": ["Education", "Skills", "Experience", "Publications"]
+  },
+  {
+    "role": "Product Manager",
+    "skills": ["Product Strategy", "Agile", "Scrum", "User Research", "A/B Testing", "Roadmapping", "JIRA", "Data Analysis", "Stakeholder Management", "Wireframing", "SQL", "Communication", "Leadership"],
+    "sections": ["Education", "Skills", "Experience", "Certifications"]
+  },
+  {
+    "role": "UX Designer",
+    "skills": ["Figma", "Sketch", "Adobe XD", "User Research", "Wireframing", "Prototyping", "Usability Testing", "Design Systems", "HTML", "CSS", "Accessibility", "Information Architecture", "Visual Design"],
+    "sections": ["Education", "Skills", "Experience", "Portfolio"]
+  },
+  {
+    "role": "Cybersecurity Analyst",
+    "skills": ["Network Security", "SIEM", "Penetration Testing", "Firewall", "Linux", "Python", "Incident Response", "Vulnerability Assessment", "Encryption", "Compliance", "IDS/IPS", "Risk Assessment", "Security Auditing"],
+    "sections": ["Education", "Skills", "Experience", "Certifications"]
+  },
+  {
+    "role": "Cloud Architect",
+    "skills": ["AWS", "Azure", "GCP", "Terraform", "Docker", "Kubernetes", "Microservices", "Serverless", "Networking", "Security", "Cost Optimization", "CI/CD", "Python", "Linux", "Architecture Design"],
+    "sections": ["Education", "Skills", "Experience", "Certifications"]
+  }
+]
