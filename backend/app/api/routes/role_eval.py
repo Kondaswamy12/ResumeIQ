@@ -11,25 +11,28 @@ class RoleRequest(BaseModel):
     role: str
 
 
-@router.post("/evaluate-role")
-def evaluate_role(request: RoleRequest):
+@router.post("/evaluate-role/{resume_id}")
+def evaluate_role(resume_id: str, request: RoleRequest):
 
-    # Check if resume exists
-    if not resume_store:
-        raise HTTPException(status_code=404, detail="No resume uploaded")
+    # ✅ Check if resume exists for this ID
+    if resume_id not in resume_store:
+        raise HTTPException(status_code=404, detail="Resume not found")
 
-    full_text = resume_store.get("full_text")
-    roles_data = resume_store.get("roles_data")
+    resume_data = resume_store[resume_id]
+
+    full_text = resume_data.get("full_text")
+    roles_data = resume_data.get("roles_data")
 
     if not full_text or not roles_data:
         raise HTTPException(status_code=400, detail="Incomplete resume data")
 
     role = request.role
 
-    # Evaluate selected role
+    # ✅ Evaluate selected role
     result = evaluate_role_ml(full_text, roles_data, role)
 
     return {
+        "resume_id": resume_id,
         "role": role,
         "evaluation": result
     }

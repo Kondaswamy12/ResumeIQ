@@ -1,14 +1,24 @@
-
 import { useState, useCallback } from 'react';
 import { ResumeUpload } from '@/components/ResumeUpload';
 import { ATSScoreDisplay } from '@/components/ATSScoreDisplay';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { RoleMatchDisplay } from '@/components/RoleMatchDisplay';
 import { RoleEvaluationDisplay } from '@/components/RoleEvaluationDisplay';
+import { useEffect } from "react";
+
+import { Hero } from '@/components/Hero';
+import { SiteHeader } from '@/components/SiteHeader';
+import { FeatureGrid } from '@/components/FeatureGrid';
+import { ResultsSummary } from '@/components/ResultsSummary';
+import { ProcessingOverlay } from '@/components/ProcessingOverlay';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { FileText, Sparkles, Search, Eye, EyeOff, Download } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+
+import {
+  Search, Code2, Eye, EyeOff, Download, RotateCcw,FileText, Sparkles
+} from 'lucide-react';
 
 import { uploadResume } from '@/service/resume';
 import { getRequest } from '@/service/api';
@@ -17,155 +27,235 @@ import { exportResultsToPdf } from '@/lib/exportPdf';
 
 import type { ATSResult, RoleMatch, RoleEvaluation } from '@/lib/atsScorer';
 
-// ---------- TYPES ----------
-interface BackendError {
-  message: string;
-  error_text: string;
-  suggestions: string[];
-}
-
-interface DetectedError {
-  totalIssues: number;
-  grammarErrors: BackendError[];
-  unprofessionalIssues: BackendError[];
-}
-
 const Index = () => {
-  const [resumeText, setResumeText] = useState<string>('');
-  const [fileName, setFileName] = useState<string>('');
+  const [resumeText, setResumeText] = useState('');
+  const [fileName, setFileName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
 
   const [atsResult, setAtsResult] = useState<ATSResult | null>(null);
-  const [errors, setErrors] = useState<DetectedError | null>(null);
+  const [errors, setErrors] = useState<any[]>([]);
   const [roleMatches, setRoleMatches] = useState<RoleMatch[] | null>(null);
   const [roleEval, setRoleEval] = useState<RoleEvaluation | null>(null);
-  const [selectedRole, setSelectedRole] = useState<string>('');
+  const [selectedRole, setSelectedRole] = useState('');
 
-  // ---------- FILE UPLOAD ----------
+  const [activeTab, setActiveTab] = useState('overview');
+  const [resumeId, setResumeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleUnload = () => {
+      if (resumeId) {
+        navigator.sendBeacon(
+          `http://127.0.0.1:8000/api/resume/${resumeId}`
+        );
+      }
+    };
+
+    window.addEventListener("beforeunload", handleUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleUnload);
+    };
+  }, [resumeId]);
+
+  // 🔥 Overlay state
+  const [overlay, setOverlay] = useState({
+    open: false,
+    title: '',
+    subtitle: '',
+    steps: [] as { icon: any; label: string }[],
+  });
+
+  
+
+  // 🔥 Overlay runner
+  const runWithOverlay = (
+    config: {
+      title: string;
+      subtitle: string;
+      steps: { icon: any; label: string }[];
+      duration?: number;
+    },
+    action: () => Promise<void> | void
+  ) => {
+    setOverlay({
+      open: true,
+      title: config.title,
+      subtitle: config.subtitle,
+      steps: config.steps,
+    });
+
+    setTimeout(async () => {
+      await action();
+      setOverlay((o) => ({ ...o, open: false }));
+    }, config.duration ?? 1100);
+  };
+
   const handleFileUpload = useCallback(async (file: File) => {
+    setIsProcessing(true);
+
     try {
-      setIsProcessing(true);
-
       const data = await uploadResume(file);
-
-      console.log("UPLOAD RESPONSE:", data); // 🔥 DEBUG
-
+      setResumeId(data.resume_id);
       setResumeText(data.full_text);
       setFileName(data.filename);
       setAtsResult(data.ats_score);
 
-      // ✅ SAFE ERROR MAPPING
-      const grammarErrors = data?.grammar_issues?.grammar_errors || [];
-      const unprofessionalIssues = data?.grammar_issues?.unprofessional_issues || [];
+      const grammar = data?.grammar_issues?.grammar_errors || [];
+      const unprof = data?.grammar_issues?.unprofessional_issues || [];
 
-      const totalIssues =
-        grammarErrors.length + unprofessionalIssues.length;
+      const formattedErrors = [
+        ...grammar.map((e: any) => ({
+          type: "grammar",
+          message: e.error_text,
+          suggestions: e.suggestions,
+        })),
+        ...unprof.map((e: any) => ({
+          type: "unprofessional",
+          message: e.error_text,
+          suggestions: e.suggestions,
+        })),
+      ];
 
-      const errorData = {
-        totalIssues,
-        grammarErrors,
-        unprofessionalIssues,
-      };
-
-      console.log("PROCESSED ERRORS:", errorData); // 🔥 DEBUG
-
-      setErrors(errorData);
-
-      setRoleMatches(null);
-      setRoleEval(null);
-      setSelectedRole('');
+      setErrors(formattedErrors);
 
     } catch (err) {
-      console.error("UPLOAD ERROR:", err);
+      console.error(err);
     } finally {
       setIsProcessing(false);
     }
   }, []);
 
-  // ---------- ROLE MATCH ----------
-  const runRoleMatch = useCallback(async () => {
+  const runRoleMatch = async () => {
+    if (!resumeId) return;
     try {
-      const data = await getRequest("http://127.0.0.1:8000/api/recommend-roles");
+      const data = await getRequest(`http://127.0.0.1:8000/api/recommend-roles/${resumeId}`);
 
-      const mapped: RoleMatch[] = data.recommended_roles.map((r: any) => ({
+      const mapped = data.recommended_roles.map((r: any) => ({
         role: r.role,
         matchPercentage: r.overall_score,
-        matchedSkills: r.matched_skills,
-        missingSkills: r.missing_skills,
+        matchedSkills: r.matched_skills || [],
+        missingSkills: r.missing_skills || [],
       }));
 
       setRoleMatches(mapped);
-
     } catch (err) {
       console.error(err);
     }
-  }, []);
+  };
 
-  // ---------- ROLE EVALUATION ----------
-  const handleRoleChange = useCallback(async (role: string) => {
-    try {
-      setSelectedRole(role);
+  const runAnalysis = () => {
+    if (!resumeText) return;
 
-      const data = await postRequest(
-        "http://127.0.0.1:8000/api/evaluate-role",
-        { role }
-      );
+    runWithOverlay(
+      {
+        title: "Analyzing Resume",
+        subtitle: "Scanning and evaluating...",
+        steps: [
+          { icon: Code2, label: "Parsing resume" },
+          { icon: Search, label: "Analyzing content" },
+          { icon: Download, label: "Generating score" },
+        ],
+      },
+      async () => {
+        await runRoleMatch();
+        setActiveTab('overview');
+      }
+    );
+  };
 
-      const ev = data.evaluation;
+  const handleRoleChange = async (role: string) => {
+    if (!resumeId) return;
+    setSelectedRole(role);
 
-      const mapped: RoleEvaluation = {
-        role: data.role,
-        overallScore: ev.overall_score,
-        sectionScores: ev.section_scores.map((s: any) => ({
-          name: s.name,
-          score: s.score,
-          found: s.found,
-        })),
-        matchedSkills: ev.matched_skills,
-        missingSkills: ev.missing_skills,
-      };
+    const data = await postRequest(
+      `http://127.0.0.1:8000/api/evaluate-role/${resumeId}`,
+      { role }
+    );
 
-      setRoleEval(mapped);
+    const ev = data.evaluation;
 
-    } catch (err) {
-      console.error(err);
-    }
-  }, []);
+    setRoleEval({
+      role: data.role,
+      overallScore: ev.overall_score,
+      sectionScores: ev.section_scores,
+      matchedSkills: ev.matched_skills,
+      missingSkills: ev.missing_skills,
+    });
 
-  // 🔥 CHECK IF ANY ERROR EXISTS
-  const hasErrors =
-    errors &&
-    (errors.grammarErrors.length > 0 ||
-      errors.unprofessionalIssues.length > 0);
+    setActiveTab('evaluate');
+  };
+
+  const handleExportPdf = () => {
+    runWithOverlay(
+      {
+        title: "Generating PDF",
+        subtitle: "Preparing report...",
+        steps: [
+          { icon: Download, label: "Collecting data" },
+          { icon: Code2, label: "Formatting report" },
+          { icon: Search, label: "Finalizing file" },
+        ],
+      },
+      () => {
+        exportResultsToPdf({
+          fileName, atsResult, errors, roleMatches, roleEval, selectedRole
+        });
+      }
+    );
+  };
+
+  const resetAll = () => {
+    runWithOverlay(
+      {
+        title: "Resetting",
+        subtitle: "Clearing data...",
+        steps: [
+          { icon: RotateCcw, label: "Clearing state" },
+          { icon: Search, label: "Resetting UI" },
+        ],
+        duration: 800,
+      },
+      
+      () => {
+        if (resumeId) {
+        navigator.sendBeacon(
+          `http://127.0.0.1:8000/api/resume/${resumeId}`
+        );
+      }
+        setResumeId(null);
+        setResumeText('');
+        setFileName('');
+        setAtsResult(null);
+        setErrors([]);
+        setRoleMatches(null);
+        setRoleEval(null);
+        setSelectedRole('');
+      }
+    );
+  };
+
+  const hasResults = !!roleMatches;
 
   return (
     <div className="min-h-screen bg-background">
 
-      {/* Header */}
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-primary p-2">
-              <Sparkles className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">ResumeIQ</h1>
-              <p className="text-xs text-muted-foreground">Smart Resume Evaluation System</p>
-            </div>
-          </div>
-          {fileName && (
-            <Badge variant="secondary" className="gap-1.5">
-              <FileText className="h-3 w-3" />
-              {fileName}
-            </Badge>
-          )}
-        </div>
-      </header>
+      <SiteHeader fileName={fileName} />
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      {/* 🔥 Overlay */}
+      <ProcessingOverlay
+        open={overlay.open}
+        title={overlay.title}
+        subtitle={overlay.subtitle}
+        steps={overlay.steps}
+      />
 
-        {/* Upload */}
+      {!resumeText && <Hero />}
+
+      <main className="max-w-7xl mx-auto px-4 py-10">
+
+        {!resumeText && <FeatureGrid />}
+
         <div className="max-w-2xl mx-auto mb-8">
           <ResumeUpload
             onFileUpload={handleFileUpload}
@@ -174,103 +264,216 @@ const Index = () => {
           />
         </div>
 
-        {/* Actions */}
         {resumeText && (
           <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
-            <Button onClick={runRoleMatch} variant="secondary" size="lg" className="gap-2">
+
+            <Button onClick={runAnalysis} size="lg" className="gap-2 bg-gradient-primary shadow-glow">
+              <Code2 className="h-4 w-4" />
+              Analyze Resume
+            </Button>
+
+            <Button
+              onClick={() =>
+                runWithOverlay(
+                  {
+                    title: "Matching Roles",
+                    subtitle: "Comparing with job roles...",
+                    steps: [
+                      { icon: Search, label: "Fetching roles" },
+                      { icon: Code2, label: "Matching skills" },
+                      { icon: Download, label: "Ranking matches" },
+                    ],
+                  },
+                  async () => {
+                    await runRoleMatch();
+                    setActiveTab('roles');
+                  }
+                )
+              }
+              variant="secondary"
+              size="lg"
+              className="gap-2"
+            >
               <Search className="h-4 w-4" />
               Check Role Match
             </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDebug(!showDebug)}
-              className="gap-1.5"
-            >
-              {showDebug ? <EyeOff /> : <Eye />}
-              {showDebug ? 'Hide' : 'Show'} Extracted Text
+            <Button onClick={handleExportPdf} variant="outline" size="lg" className="gap-2">
+              <Download className="h-4 w-4" />
+              Export PDF
             </Button>
+
+            <Button variant="ghost" size="sm" onClick={() => setShowDebug(!showDebug)}>
+              {showDebug ? <EyeOff /> : <Eye />}
+            </Button>
+
+            <Button onClick={resetAll} variant="ghost" size="sm">
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+
           </div>
         )}
 
-        {/* Debug */}
         {showDebug && resumeText && (
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">
-                Extracted Text (Debug)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <pre className="text-xs bg-muted rounded-lg p-4 max-h-64 overflow-auto whitespace-pre-wrap font-mono">
-                {resumeText}
-              </pre>
-            </CardContent>
-          </Card>
+          <Card className="mb-6">
+        <CardHeader>
+    <CardTitle className="text-sm">Extracted Text</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="text-xs space-y-1">
+      {resumeText.split(" $n$ ").map((line, index) => (
+        <p key={index} className="text-muted-foreground">
+          {line}
+        </p>
+      ))}
+    </div>
+  </CardContent>
+</Card>
         )}
 
-        {/* Results */}
-        {(atsResult || roleMatches) && (
+        {hasResults && (
           <>
-            {/* Export */}
-            <div className="flex justify-end mb-4">
-              <Button
-                onClick={() =>
-                  exportResultsToPdf({
-                    fileName,
-                    atsResult,
-                    errors,
-                    roleMatches,
-                    roleEval,
-                    selectedRole,
-                  })
-                }
-                variant="outline"
-                className="gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Export to PDF
-              </Button>
-            </div>
+            <ResultsSummary atsResult={atsResult} errors={errors} roleMatches={roleMatches} />
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid grid-cols-4 max-w-2xl mx-auto mb-6">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="errors">Errors</TabsTrigger>
+                <TabsTrigger value="roles">Roles</TabsTrigger>
+                <TabsTrigger value="evaluate">Evaluate</TabsTrigger>
+              </TabsList>
 
-              {atsResult && <ATSScoreDisplay result={atsResult} />}
+              <TabsContent value="overview">
+  <div className="max-w-3xl mx-auto">
+    {atsResult && <ATSScoreDisplay result={atsResult} />}
+    {errors.length > 0 && <ErrorDisplay errors={errors} />}
+  </div>
+</TabsContent>
 
-              {/* ✅ FIXED ERROR DISPLAY */}
-              {hasErrors && <ErrorDisplay errors={errors} />}
+<TabsContent value="errors">
+  <div className="max-w-3xl mx-auto">
+    {errors.length > 0 ? (
+      <ErrorDisplay errors={errors} />
+    ) : (
+      <Card className="p-6 text-center">No errors</Card>
+    )}
+  </div>
+</TabsContent>
 
-              {roleMatches && <RoleMatchDisplay matches={roleMatches} />}
+<TabsContent value="roles">
+  <div className="max-w-3xl mx-auto">
+    {roleMatches && <RoleMatchDisplay matches={roleMatches} />}
+  </div>
+</TabsContent>
 
-              <RoleEvaluationDisplay
-                evaluation={roleEval}
-                selectedRole={selectedRole}
-                onRoleChange={handleRoleChange}
-              />
-            </div>
+<TabsContent value="evaluate">
+  <div className="max-w-3xl mx-auto">
+    <RoleEvaluationDisplay
+      evaluation={roleEval}
+      selectedRole={selectedRole}
+      onRoleChange={handleRoleChange}
+    />
+  </div>
+</TabsContent>
+
+            </Tabs>
           </>
         )}
+        
 
-        {/* Empty */}
-        {!resumeText && (
-          <div className="text-center py-16">
-            <div className="rounded-full bg-primary/10 p-6 w-fit mx-auto mb-4">
-              <FileText className="h-10 w-10 text-primary" />
+      {!resumeText && (
+          <div className="text-center py-12 animate-fade-in">
+            <div className="relative w-fit mx-auto mb-4">
+              <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
+              <div className="relative rounded-full bg-gradient-primary p-6 animate-float shadow-glow">
+                <FileText className="h-10 w-10 text-primary-foreground" />
+              </div>
             </div>
-            <h2 className="text-xl font-semibold mb-2">
-              Upload your resume to get started
-            </h2>
+            <h2 className="text-xl font-semibold text-foreground mb-2">Upload your resume to get started</h2>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Get ATS scoring, role matching, and evaluation using backend APIs.
+              Get instant ATS scoring, error detection, and role matching — all processed locally, no data leaves your browser.
             </p>
           </div>
         )}
-
       </main>
+      
+
+      <footer className="relative z-10 border-t border-border bg-bg/80 backdrop-blur-sm">
+  <div className="mx-auto max-w-7xl px-6 py-12">
+
+    <div className="grid gap-10 md:grid-cols-4">
+      
+      {/* New Logo + Description */}
+      <div>
+        <div className="flex items-start gap-3">
+          
+          {/* Logo Icon */}
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/40 blur-lg rounded-xl" />
+            <div className="relative rounded-xl bg-gradient-primary p-2 shadow-glow">
+              <Sparkles className="h-5 w-5 text-primary-foreground" />
+            </div>
+          </div>
+
+          {/* Logo Text */}
+          <div>
+            <h1 className="text-lg font-bold text-text leading-tight">
+              ResumeIQ
+            </h1>
+            <p className="text-[10px] uppercase tracking-wider text-text/60">
+              Smart Resume Evaluation System
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-4 text-sm text-text/70 leading-relaxed">
+          Smart resume feedback to help students land their first big role.
+        </p>
+      </div>
+
+      {/* Columns */}
+      {[
+        { title: "Product", items: ["Resume Score", "Templates", "ATS Checker", "Job Match"] },
+        { title: "Resources", items: ["Resume Tips", "Sample Resumes", "Career Blog", "Internship Guide"] },
+        { title: "Company", items: ["About", "Privacy", "Terms", "Contact"] },
+      ].map((col) => (
+        <div key={col.title}>
+          <div className="text-sm font-semibold text-text">
+            {col.title}
+          </div>
+
+          <ul className="mt-4 space-y-2 text-sm">
+            {col.items.map((item) => (
+              <li
+                key={item}
+                className="cursor-pointer text-text/70 transition-all duration-200 hover:text-primary hover:translate-x-1"
+              >
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+
+    {/* Bottom Bar */}
+    <div className="mt-10 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-border pt-6 text-sm text-text/60">
+      <div>
+        © {new Date().getFullYear()} ResumeIQ. All rights reserved.
+      </div>
+
+      {/* Optional Socials */}
+      <div className="flex items-center gap-4">
+        <span className="cursor-pointer hover:text-primary transition">Twitter</span>
+        <span className="cursor-pointer hover:text-primary transition">LinkedIn</span>
+        <span className="cursor-pointer hover:text-primary transition">GitHub</span>
+      </div>
+    </div>
+
+  </div>
+</footer>
     </div>
   );
 };
 
 export default Index;
-

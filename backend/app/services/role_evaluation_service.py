@@ -121,6 +121,7 @@ def calculate_section_scores(full_text, role):
             "score": final_score,
             "found": found
         })
+        
 
     return scores
 
@@ -134,7 +135,7 @@ def evaluate_role_ml(full_text: str, roles_data: list, target_role: str):
     if not role:
         raise ValueError("Role not found")
 
-    normalized_val = 1.75
+    normalized_val = 1.6
 
     skills = role.get("skills", [])
     sections = role.get("sections", ["skills", "experience"])
@@ -153,7 +154,7 @@ def evaluate_role_ml(full_text: str, roles_data: list, target_role: str):
     )
 
     #  final score
-    final_score = int(skill_score * 0.75 + avg_section_score * 0.2)
+    final_score = int(skill_score * 0.70 + avg_section_score * 0.2)
 
     final_score = min(int(final_score * normalized_val), 92)
 

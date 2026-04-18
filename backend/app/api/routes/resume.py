@@ -4,6 +4,7 @@ from app.core.database import roles_collection, ats_collection
 from app.core.storage import resume_store
 from app.services.ats_service import calculate_ats
 from app.services.grammar_service import analyze_text_quality
+import uuid
 
 router = APIRouter()
 
@@ -31,16 +32,19 @@ async def upload_resume(file: UploadFile = File(...)):
 
     role_names = [role.get("role", "") for role in roles_data]
 
-    #  Store ONLY ONE resume (overwrite previous)
-    resume_store.clear()
-    resume_store.update({
+   
+    resume_id = str(uuid.uuid4())
+
+   
+    resume_store[resume_id] = {
         "filename": file.filename,
         "full_text": full_text,
         "roles_data": roles_data
-    })
+    }
 
     return {
         "message": "Resume processed",
+        "resume_id": resume_id,   
         "filename": file.filename,
         "full_text": full_text,
         "available_roles": role_names,

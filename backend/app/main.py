@@ -2,7 +2,9 @@ from fastapi import FastAPI
 from app.api.routes import resume
 from app.api.routes import role   
 from app.api.routes import role_eval
+from app.api.routes import delete
 from fastapi.middleware.cors import CORSMiddleware
+
 
 
 
@@ -18,6 +20,7 @@ app.add_middleware(
 app.include_router(resume.router, prefix="/api")
 app.include_router(role.router, prefix="/api")   
 app.include_router(role_eval.router, prefix="/api")
+app.include_router(delete.router, prefix="/api")
 
 @app.get("/")
 def home():

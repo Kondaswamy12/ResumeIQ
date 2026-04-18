@@ -1,50 +1,6 @@
 import jsPDF from 'jspdf';
 
-type ExportData = {
-  fileName: string;
-
-  atsResult?: {
-    overallScore: number;
-    keywordScore: number;
-    sectionScore: number;
-    formattingScore: number;
-    matchedKeywords: string[];
-    missingKeywords: string[];
-  };
-
-  errors?: {
-    totalIssues: number;
-    grammarErrors: {
-      error_text: string;
-      suggestions?: string[];
-    }[];
-    unprofessionalIssues: {
-      error_text: string;
-      suggestions?: string[];
-    }[];
-  };
-
-  roleMatches?: {
-    role: string;
-    matchPercentage: number;
-    matchedSkills: string[];
-    missingSkills: string[];
-  }[];
-
-  roleEval?: {
-    role: string;
-    overallScore: number;
-    sectionScores: {
-      name: string;
-      score: number;
-      found: boolean;
-    }[];
-    matchedSkills: string[];
-    missingSkills: string[];
-  };
-};
-
-export function exportResultsToPdf(data: ExportData) {
+export function exportResultsToPdf(data: any) {
   const doc = new jsPDF();
 
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -52,223 +8,221 @@ export function exportResultsToPdf(data: ExportData) {
   const contentWidth = pageWidth - margin * 2;
   let y = 20;
 
+  const COLORS = {
+    primary: [37, 99, 235],
+    green: [22, 163, 74],
+    amber: [245, 158, 11],
+    red: [239, 68, 68],
+    text: [17, 24, 39],
+    subtext: [107, 114, 128],
+    light: [229, 231, 235],
+  };
 
+  const today = new Date().toLocaleDateString();
 
   const checkPage = (space = 10) => {
-    if (y + space > 270) {
+    if (y + space > 280) {
       doc.addPage();
       y = 20;
     }
   };
 
-  const sectionHeader = (title: string) => {
-    checkPage(20);
-    doc.setFontSize(15);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30);
-    doc.text(title, margin, y);
-    y += 6;
-
-    doc.setDrawColor(220);
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 8;
-  };
-
-  const writeText = (text: string, color = [60, 60, 60]) => {
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...color);
-
-    const lines = doc.splitTextToSize(text, contentWidth);
-    doc.text(lines, margin, y);
-    y += lines.length * 5;
-  };
-
-  const writeBulletList = (items: string[], color: number[]) => {
-    doc.setTextColor(...color);
-
-    items.forEach((item) => {
-      checkPage(6);
-      const lines = doc.splitTextToSize(`• ${item}`, contentWidth - 5);
-      doc.text(lines, margin + 5, y);
-      y += lines.length * 5;
-    });
-
-    y += 3;
-  };
-
-  const drawProgressBar = (
-    label: string,
-    value: number
-  ) => {
-    checkPage(12);
-
-    doc.setFontSize(10);
-    doc.setTextColor(0);
-    doc.text(label, margin, y);
-
-    doc.text(`${value}%`, pageWidth - margin - 10, y);
-    y += 3;
-
-    // Background
-    doc.setFillColor(230, 230, 230);
-    doc.rect(margin, y, contentWidth, 5, 'F');
-
-    // Color
-    const color =
-      value >= 70 ? [34, 197, 94] :
-      value >= 40 ? [234, 179, 8] :
-      [239, 68, 68];
-
-    doc.setFillColor(...color);
-    doc.rect(margin, y, (value / 100) * contentWidth, 5, 'F');
-
-    y += 8;
-  };
-
   // ---------- HEADER ----------
-
-  doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  doc.setTextColor(...COLORS.primary);
   doc.text('ResumeIQ Report', margin, y);
 
   y += 8;
 
   doc.setFontSize(10);
-  doc.setTextColor(120);
+  doc.setTextColor(...COLORS.subtext);
+  doc.setFont('helvetica', 'normal');
   doc.text(`File: ${data.fileName}`, margin, y);
-  doc.text(new Date().toLocaleDateString(), pageWidth - margin - 30, y);
+  y += 5;
+  doc.text(`Generated on: ${today}`, margin, y);
 
-  doc.setTextColor(0);
   y += 12;
 
-  // ---------- ATS SECTION ----------
+  // ---------- SECTION HEADER ----------
+  const sectionHeader = (title: string) => {
+    checkPage(20);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...COLORS.text);
+    doc.text(title, margin, y);
 
+    y += 4;
+
+    doc.setDrawColor(...COLORS.light);
+    doc.line(margin, y, pageWidth - margin, y);
+
+    y += 8;
+  };
+
+  // ---------- TEXT ----------
+  const writeText = (text: string, small = false) => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(small ? 10 : 11);
+    doc.setTextColor(...COLORS.text);
+
+    const lines = doc.splitTextToSize(text, contentWidth);
+    doc.text(lines, margin, y);
+
+    y += lines.length * 6;
+  };
+
+  // ---------- PROGRESS BAR ----------
+  const drawProgressBar = (label: string, value: number) => {
+    checkPage(15);
+
+    doc.setFontSize(11);
+    doc.setTextColor(...COLORS.text);
+    doc.text(label, margin, y);
+
+    doc.text(`${value}%`, pageWidth - margin - 10, y);
+    y += 4;
+
+    // background
+    doc.setFillColor(...COLORS.light);
+    doc.roundedRect(margin, y, contentWidth, 6, 3, 3, 'F');
+
+    // color logic
+    const color =
+      value >= 90 ? COLORS.green :
+      value >= 70 ? COLORS.primary :
+      value >= 50 ? COLORS.amber :
+      COLORS.red;
+
+    doc.setFillColor(...color);
+    doc.roundedRect(
+      margin,
+      y,
+      (value / 100) * contentWidth,
+      6,
+      3,
+      3,
+      'F'
+    );
+
+    y += 10;
+  };
+
+  // ---------- TAGS (KEYWORDS) ----------
+  const drawTags = (items: string[]) => {
+    let x = margin;
+    const paddingX = 4;
+    const paddingY = 3;
+
+    items.forEach((item) => {
+      const textWidth = doc.getTextWidth(item);
+      const boxWidth = textWidth + paddingX * 2;
+
+      if (x + boxWidth > pageWidth - margin) {
+        x = margin;
+        y += 8;
+      }
+
+      doc.setFillColor(...COLORS.light);
+      doc.roundedRect(x, y - 4, boxWidth, 6, 2, 2, 'F');
+
+      doc.setFontSize(9);
+      doc.setTextColor(...COLORS.text);
+      doc.text(item, x + paddingX, y);
+
+      x += boxWidth + 4;
+    });
+
+    y += 10;
+  };
+
+  // ---------- ATS SECTION ----------
   if (data.atsResult) {
     const r = data.atsResult;
 
-    sectionHeader('ATS Score');
+    sectionHeader('ATS Analysis');
 
     // Big Score
     doc.setFontSize(28);
-    doc.setTextColor(34, 197, 94);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...COLORS.primary);
     doc.text(`${r.overallScore}%`, margin, y);
-    doc.setTextColor(0);
-    y += 10;
 
-    drawProgressBar('Keyword Score', r.keywordScore);
-    drawProgressBar('Section Score', r.sectionScore);
-    drawProgressBar('Formatting Score', r.formattingScore);
+    doc.setFontSize(11);
+    doc.setTextColor(...COLORS.subtext);
+    doc.text('Overall ATS Score', margin + 30, y);
 
-    // Keywords
-    if (r.matchedKeywords.length > 0) {
-      doc.setFont('helvetica', 'bold');
-      writeText('Matched Keywords:', [34, 197, 94]);
-      writeBulletList(r.matchedKeywords, [34, 197, 94]);
+    y += 12;
+
+    drawProgressBar('Keyword Match', r.keywordScore);
+    drawProgressBar('Section Quality', r.sectionScore);
+    drawProgressBar('Formatting', r.formattingScore);
+
+    if (r.matchedKeywords.length) {
+      writeText('Matched Keywords:', true);
+      drawTags(r.matchedKeywords);
     }
 
-    if (r.missingKeywords.length > 0) {
-      doc.setFont('helvetica', 'bold');
-      writeText('Missing Keywords:', [239, 68, 68]);
-      writeBulletList(r.missingKeywords, [239, 68, 68]);
+    if (r.missingKeywords.length) {
+      writeText('Missing Keywords:', true);
+      drawTags(r.missingKeywords);
     }
-
-    y += 5;
   }
 
   // ---------- ERRORS ----------
+  if (data.errors?.length) {
+    sectionHeader(`Detected Issues (${data.errors.length})`);
 
-  if (data.errors && data.errors.totalIssues > 0) {
-    sectionHeader(`Detected Issues (${data.errors.totalIssues})`);
+    data.errors.forEach((e, i) => {
+      checkPage(10);
 
-    if (data.errors.grammarErrors.length > 0) {
-      writeText('Grammar Issues:', [234, 179, 8]);
+      doc.setTextColor(...COLORS.red);
+      writeText(`${i + 1}. ${e.message}`);
 
-      data.errors.grammarErrors.forEach((err, i) => {
-        checkPage(10);
-        writeText(`${i + 1}. "${err.error_text}"`);
-        writeText(`Suggestion: ${err.suggestions?.[0] || ''}`, [0, 120, 200]);
-        y += 3;
-      });
-    }
-
-    if (data.errors.unprofessionalIssues.length > 0) {
-      writeText('Unprofessional Content:', [239, 68, 68]);
-
-      data.errors.unprofessionalIssues.forEach((err, i) => {
-        checkPage(10);
-        writeText(`${i + 1}. "${err.error_text}"`);
-        writeText(`Suggestion: ${err.suggestions?.[0] || ''}`, [0, 120, 200]);
-        y += 3;
-      });
-    }
-
-    y += 5;
-  }
-
-  // ---------- ROLE MATCH ----------
-
-  if (data.roleMatches?.length) {
-    sectionHeader('Role Matches');
-
-    data.roleMatches.forEach((m) => {
-      checkPage(15);
-
-      doc.setFont('helvetica', 'bold');
-      doc.text(m.role, margin, y);
-
-      doc.setFont('helvetica', 'normal');
-      doc.text(`${m.matchPercentage}%`, pageWidth - margin - 10, y);
-
-      y += 6;
-
-      if (m.matchedSkills.length) {
-        writeText(`Matched: ${m.matchedSkills.join(', ')}`, [34, 197, 94]);
+      if (e.suggestions?.length) {
+        doc.setTextColor(...COLORS.subtext);
+        writeText(`Suggestion: ${e.suggestions[0]}`, true);
       }
-
-      if (m.missingSkills.length) {
-        writeText(`Missing: ${m.missingSkills.join(', ')}`, [239, 68, 68]);
-      }
-
-      y += 4;
     });
   }
 
-  // ---------- ROLE EVALUATION ----------
+  // ---------- ROLE MATCH ----------
+  if (data.roleMatches?.length) {
+    sectionHeader('Role Matches');
 
+    data.roleMatches.forEach((r) => {
+      drawProgressBar(r.role, r.matchPercentage);
+    });
+  }
+
+  // ---------- ROLE EVAL ----------
   if (data.roleEval) {
     const ev = data.roleEval;
 
     sectionHeader(`Role Evaluation: ${ev.role}`);
 
-    doc.setFontSize(16);
-    doc.text(`Overall Score: ${ev.overallScore}%`, margin, y);
-    y += 8;
+    drawProgressBar('Overall Score', ev.overallScore);
 
     ev.sectionScores.forEach((s) => {
-      checkPage(6);
-
-      const symbol = s.found ? '✓' : '✗';
-      const color = s.found ? [34, 197, 94] : [239, 68, 68];
-
-      doc.setTextColor(...color);
-      doc.text(`${symbol} ${s.name}`, margin, y);
-
-      doc.setTextColor(0);
-      doc.text(`${s.score}%`, pageWidth - margin - 10, y);
-
-      y += 6;
+      drawProgressBar(s.name, s.score);
     });
-
-    if (ev.matchedSkills.length) {
-      writeText(`Matched Skills: ${ev.matchedSkills.join(', ')}`, [34, 197, 94]);
-    }
-
-    if (ev.missingSkills.length) {
-      writeText(`Missing Skills: ${ev.missingSkills.join(', ')}`, [239, 68, 68]);
-    }
   }
 
-  // ---------- SAVE ----------
-  doc.save(`ResumeIQ_Report_${data.fileName.replace(/\.[^.]+$/, '')}.pdf`);
+  // ---------- FOOTER ----------
+  const pageCount = doc.getNumberOfPages();
+
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(9);
+    doc.setTextColor(...COLORS.subtext);
+
+    doc.text(
+      `Generated by ResumeIQ • Page ${i} of ${pageCount}`,
+      pageWidth / 2,
+      290,
+      { align: 'center' }
+    );
+  }
+
+  doc.save(`ResumeIQ_${data.fileName}.pdf`);
 }

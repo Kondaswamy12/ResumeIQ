@@ -1,4 +1,4 @@
-import rolesData from '@/data/roles.json';
+
 
 export interface ATSResult {
   overallScore: number;

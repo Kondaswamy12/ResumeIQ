@@ -2,22 +2,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Type, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 
-interface BackendError {
+interface ErrorItem {
+  type: 'grammar' | 'unprofessional';
   message: string;
-  error_text: string;
-  suggestions: string[];
+  suggestions?: string[];
 }
 
-interface DetectedError {
-  totalIssues: number;
-  grammarErrors: BackendError[];
-  unprofessionalIssues: BackendError[];
-}
+export function ErrorDisplay({ errors }: { errors: ErrorItem[] }) {
 
-export function ErrorDisplay({ errors }: { errors: DetectedError }) {
-
-  // ✅ No issues case
-  if (errors.totalIssues === 0) {
+  // ✅ No issues
+  if (!errors || errors.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -41,13 +35,17 @@ export function ErrorDisplay({ errors }: { errors: DetectedError }) {
     );
   }
 
+  // 🔥 Split by type
+  const grammarErrors = errors.filter(e => e.type === 'grammar');
+  const unprofessionalErrors = errors.filter(e => e.type === 'unprofessional');
+
   // 🔥 Reusable Issue Card
   const IssueCard = ({
     err,
     index,
     type
   }: {
-    err: BackendError;
+    err: ErrorItem;
     index: number;
     type: 'grammar' | 'unprofessional';
   }) => {
@@ -60,7 +58,6 @@ export function ErrorDisplay({ errors }: { errors: DetectedError }) {
           ${isGrammar ? 'border-l-4 border-yellow-500' : 'border-l-4 border-red-500'}
         `}
       >
-        {/* Issue Title */}
         <p className="text-xs text-muted-foreground mb-2">
           Issue {index + 1}
         </p>
@@ -71,7 +68,7 @@ export function ErrorDisplay({ errors }: { errors: DetectedError }) {
           <div>
             <p className="text-xs text-muted-foreground">Original</p>
             <p className="text-sm font-medium text-destructive">
-              "{err.error_text}"
+              "{err.message}"
             </p>
           </div>
         </div>
@@ -99,15 +96,15 @@ export function ErrorDisplay({ errors }: { errors: DetectedError }) {
           <AlertCircle className="h-5 w-5 text-warning" />
           Error Detection
           <Badge variant="outline" className="ml-auto">
-            {errors.totalIssues} issue{errors.totalIssues > 1 ? 's' : ''}
+            {errors.length} issue{errors.length > 1 ? 's' : ''}
           </Badge>
         </CardTitle>
       </CardHeader>
 
       <CardContent className="space-y-6">
 
-        
-        {errors.grammarErrors.length > 0 && (
+        {/* Grammar */}
+        {grammarErrors.length > 0 && (
           <div>
             <p className="text-sm font-semibold flex items-center gap-2 mb-3 text-yellow-600">
               <Type className="h-4 w-4" />
@@ -115,15 +112,15 @@ export function ErrorDisplay({ errors }: { errors: DetectedError }) {
             </p>
 
             <div className="space-y-3">
-              {errors.grammarErrors.map((err, i) => (
+              {grammarErrors.map((err, i) => (
                 <IssueCard key={i} err={err} index={i} type="grammar" />
               ))}
             </div>
           </div>
         )}
 
-        
-        {errors.unprofessionalIssues.length > 0 && (
+        {/* Unprofessional */}
+        {unprofessionalErrors.length > 0 && (
           <div>
             <p className="text-sm font-semibold flex items-center gap-2 mb-3 text-red-600">
               <AlertTriangle className="h-4 w-4" />
@@ -131,7 +128,7 @@ export function ErrorDisplay({ errors }: { errors: DetectedError }) {
             </p>
 
             <div className="space-y-3">
-              {errors.unprofessionalIssues.map((err, i) => (
+              {unprofessionalErrors.map((err, i) => (
                 <IssueCard key={i} err={err} index={i} type="unprofessional" />
               ))}
             </div>

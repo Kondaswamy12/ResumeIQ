@@ -4,8 +4,4 @@ export interface BackendError {
   suggestions: string[];
 }
 
-export interface DetectedError {
-  totalIssues: number;
-  grammarErrors: BackendError[];
-  unprofessionalIssues: BackendError[];
-}
+

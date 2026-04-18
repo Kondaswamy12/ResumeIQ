@@ -1,34 +1,43 @@
 import re
 import requests
 
+SEPARATOR = "$n$"
+
 
 def is_valid_grammar_issue(issue):
 
     message = issue.get("message", "").lower()
     error_text = issue.get("error_text", "").strip()
 
-    #  Ignore URLs
+    # 🔥 Ignore empty / only spaces
+    if not error_text or error_text.strip() == "":
+        return False
+
+    # Ignore URLs
     if any(x in error_text.lower() for x in ["http", "www", ".com"]):
         return False
 
-    #  Ignore very long text (paragraph noise)
+    # Ignore very long text
     if len(error_text) > 50:
         return False
 
-    # Ignore ONLY clear name-like patterns (but not all capital words)
+    # Ignore name-like patterns
     if error_text.istitle() and len(error_text.split()) == 1:
         return False
 
-    #  Ignore specific weak messages only
+    # Ignore weak messages
     if "possible spelling mistake found" in message:
         return False
 
-    #  KEEP important grammar issues
     return True
 
 
 # ---------- GRAMMAR CHECK ----------
 def check_grammar_api(text: str):
+
+    # 🔥 REMOVE SEPARATOR + NORMALIZE
+    text = text.replace(SEPARATOR, " ")
+    text = re.sub(r"\s+", " ", text).strip()
 
     url = "https://api.languagetool.org/v2/check"
 
@@ -41,7 +50,7 @@ def check_grammar_api(text: str):
         matches = response.json().get("matches", [])
 
         results = []
-        seen = set()   
+        seen = set()
 
         for match in matches:
             error_text = text[match["offset"]: match["offset"] + match["length"]]
@@ -54,7 +63,6 @@ def check_grammar_api(text: str):
                 ]
             }
 
-            # 🔥 UNIQUE KEY
             key = (issue["message"], issue["error_text"])
 
             if key in seen:
@@ -73,14 +81,18 @@ def check_grammar_api(text: str):
 # ---------- UNPROFESSIONAL CHECK ----------
 def check_unprofessional(text: str):
 
+    # 🔥 CLEAN TEXT HERE ALSO
+    text = text.replace(SEPARATOR, " ")
+
     issues = []
 
-    # Emojis
     emoji_pattern = re.compile("["
         u"\U0001F600-\U0001F64F"
         u"\U0001F300-\U0001F5FF"
         u"\U0001F680-\U0001F6FF"
-    "]+")
+    "]+"
+
+    )
 
     emojis = emoji_pattern.findall(text)
     if emojis:
@@ -89,17 +101,18 @@ def check_unprofessional(text: str):
             "found": emojis
         })
 
-    
-
     return issues
 
 
 # ---------- MAIN FUNCTION ----------
 def analyze_text_quality(full_text: str):
 
-    grammar_errors = check_grammar_api(full_text)
+    # 🔥 CLEAN ONCE HERE (BEST PRACTICE)
+    clean_text = full_text.replace(SEPARATOR, " ")
+    clean_text = re.sub(r"\s+", " ", clean_text).strip()
 
-    unprofessional_issues = check_unprofessional(full_text)
+    grammar_errors = check_grammar_api(clean_text)
+    unprofessional_issues = check_unprofessional(clean_text)
 
     total_issues = len(grammar_errors) + len(unprofessional_issues)
 
