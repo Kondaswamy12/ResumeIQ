@@ -58,7 +58,7 @@ const Index = () => {
     };
   }, [resumeId]);
 
-  // 🔥 Overlay state
+  
   const [overlay, setOverlay] = useState({
     open: false,
     title: '',
@@ -68,7 +68,7 @@ const Index = () => {
 
   
 
-  // 🔥 Overlay runner
+  
   const runWithOverlay = (
     config: {
       title: string;

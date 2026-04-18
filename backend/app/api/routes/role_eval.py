@@ -14,7 +14,6 @@ class RoleRequest(BaseModel):
 @router.post("/evaluate-role/{resume_id}")
 def evaluate_role(resume_id: str, request: RoleRequest):
 
-    # ✅ Check if resume exists for this ID
     if resume_id not in resume_store:
         raise HTTPException(status_code=404, detail="Resume not found")
 
@@ -28,7 +27,6 @@ def evaluate_role(resume_id: str, request: RoleRequest):
 
     role = request.role
 
-    # ✅ Evaluate selected role
     result = evaluate_role_ml(full_text, roles_data, role)
 
     return {

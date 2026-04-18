@@ -11,7 +11,7 @@ def extract_text_from_pdf(file):
             if page_text:
                 lines = page_text.split("\n")
                 for line in lines:
-                    text += line.strip() + SEPARATOR  # ✅ custom separator
+                    text += line.strip() + SEPARATOR  
     return text
 
 
@@ -19,7 +19,7 @@ def extract_text_from_docx(file):
     doc = Document(file)
     text = ""
     for para in doc.paragraphs:
-        text += para.text.strip() + SEPARATOR  # ✅ custom separator
+        text += para.text.strip() + SEPARATOR  
     return text
 
 

@@ -1,51 +1,86 @@
 import re
 import requests
 
-SEPARATOR = "$n$"
+
+# ================= CONFIG =================
+class TextQualityConfig:
+    """
+    Configuration for text quality analysis.
+    """
+
+    SEPARATOR = "$n$"
+
+    MAX_ERROR_TEXT_LENGTH = 50
+
+    IGNORED_PATTERNS = ["http", "www", ".com"]
+
+    IGNORED_MESSAGES = [
+        "possible spelling mistake found"
+    ]
+
+    MAX_SUGGESTIONS = 3
+
+    LANGUAGE_TOOL_URL = "https://api.languagetool.org/v2/check"
 
 
-def is_valid_grammar_issue(issue):
+# ================= UTILITIES =================
+def clean_text(text: str) -> str:
+    """
+    Normalizes text by removing separators and extra whitespace.
+    """
+    text = text.replace(TextQualityConfig.SEPARATOR, " ")
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+# ================= VALIDATION =================
+def is_valid_grammar_issue(issue: dict) -> bool:
+    """
+    Filters out low-value or noisy grammar issues.
+    """
 
     message = issue.get("message", "").lower()
     error_text = issue.get("error_text", "").strip()
 
-    # 🔥 Ignore empty / only spaces
-    if not error_text or error_text.strip() == "":
+    # Ignore empty text
+    if not error_text:
         return False
 
     # Ignore URLs
-    if any(x in error_text.lower() for x in ["http", "www", ".com"]):
+    if any(x in error_text.lower() for x in TextQualityConfig.IGNORED_PATTERNS):
         return False
 
     # Ignore very long text
-    if len(error_text) > 50:
+    if len(error_text) > TextQualityConfig.MAX_ERROR_TEXT_LENGTH:
         return False
 
-    # Ignore name-like patterns
+    # Ignore name-like tokens (e.g., "John")
     if error_text.istitle() and len(error_text.split()) == 1:
         return False
 
-    # Ignore weak messages
-    if "possible spelling mistake found" in message:
+    # Ignore weak / noisy messages
+    if any(msg in message for msg in TextQualityConfig.IGNORED_MESSAGES):
         return False
 
     return True
 
 
-# ---------- GRAMMAR CHECK ----------
+# ================= GRAMMAR CHECK =================
 def check_grammar_api(text: str):
+    """
+    Uses LanguageTool API to detect grammar issues.
+    """
 
-    # 🔥 REMOVE SEPARATOR + NORMALIZE
-    text = text.replace(SEPARATOR, " ")
-    text = re.sub(r"\s+", " ", text).strip()
-
-    url = "https://api.languagetool.org/v2/check"
+    clean = clean_text(text)
 
     try:
-        response = requests.post(url, data={
-            "text": text,
-            "language": "en-US"
-        })
+        response = requests.post(
+            TextQualityConfig.LANGUAGE_TOOL_URL,
+            data={
+                "text": clean,
+                "language": "en-US"
+            }
+        )
 
         matches = response.json().get("matches", [])
 
@@ -53,13 +88,16 @@ def check_grammar_api(text: str):
         seen = set()
 
         for match in matches:
-            error_text = text[match["offset"]: match["offset"] + match["length"]]
+            error_text = clean[
+                match["offset"]: match["offset"] + match["length"]
+            ]
 
             issue = {
                 "message": match.get("message"),
                 "error_text": error_text,
                 "suggestions": [
-                    r.get("value") for r in match.get("replacements", [])[:3]
+                    r.get("value")
+                    for r in match.get("replacements", [])[:TextQualityConfig.MAX_SUGGESTIONS]
                 ]
             }
 
@@ -75,26 +113,30 @@ def check_grammar_api(text: str):
         return results
 
     except Exception:
+        # Fail-safe: return empty instead of breaking pipeline
         return []
 
 
-# ---------- UNPROFESSIONAL CHECK ----------
+# ================= UNPROFESSIONAL CONTENT =================
 def check_unprofessional(text: str):
+    """
+    Detects informal/unprofessional elements (e.g., emojis).
+    """
 
-    # 🔥 CLEAN TEXT HERE ALSO
-    text = text.replace(SEPARATOR, " ")
+    clean = clean_text(text)
 
     issues = []
 
-    emoji_pattern = re.compile("["
+    emoji_pattern = re.compile(
+        "["
         u"\U0001F600-\U0001F64F"
         u"\U0001F300-\U0001F5FF"
         u"\U0001F680-\U0001F6FF"
-    "]+"
-
+        "]+"
     )
 
-    emojis = emoji_pattern.findall(text)
+    emojis = emoji_pattern.findall(clean)
+
     if emojis:
         issues.append({
             "type": "emoji",
@@ -104,15 +146,18 @@ def check_unprofessional(text: str):
     return issues
 
 
-# ---------- MAIN FUNCTION ----------
+# ================= MAIN FUNCTION =================
 def analyze_text_quality(full_text: str):
+    """
+    Runs full text quality analysis:
+    - Grammar validation
+    - Professional tone checks
+    """
 
-    # 🔥 CLEAN ONCE HERE (BEST PRACTICE)
-    clean_text = full_text.replace(SEPARATOR, " ")
-    clean_text = re.sub(r"\s+", " ", clean_text).strip()
+    clean = clean_text(full_text)
 
-    grammar_errors = check_grammar_api(clean_text)
-    unprofessional_issues = check_unprofessional(clean_text)
+    grammar_errors = check_grammar_api(clean)
+    unprofessional_issues = check_unprofessional(clean)
 
     total_issues = len(grammar_errors) + len(unprofessional_issues)
 

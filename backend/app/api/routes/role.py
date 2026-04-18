@@ -8,7 +8,7 @@ router = APIRouter()
 @router.get("/recommend-roles/{resume_id}")
 def recommend_roles(resume_id: str):
 
-    # ✅ Check if resume exists for this ID
+    
     if resume_id not in resume_store:
         raise HTTPException(status_code=404, detail="Resume not found")
 
@@ -20,7 +20,7 @@ def recommend_roles(resume_id: str):
     if not full_text or not roles_data:
         raise HTTPException(status_code=400, detail="Incomplete resume data")
 
-    # ✅ Get top roles
+    
     top_roles = get_top_roles(full_text, roles_data, 5)
 
     return {
