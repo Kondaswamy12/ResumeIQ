@@ -1,34 +1,5 @@
 
-fastapi==0.135.2
-uvicorn==0.42.0
-gunicorn
-pydantic==2.12.5
-pymongo==4.16.0
-python-dotenv==1.2.2
-requests==2.33.1
-httpx==0.28.1
 
-spacy==3.8.14
-nltk==3.9.4
-scikit-learn==1.8.0
-
-pdfminer.six==20251230
-pdfplumber==0.11.9
-pypdfium2==5.6.0
-
-python-docx==1.2.0
-pillow==12.1.1
-lxml==6.0.2
-
-numpy==2.4.4
-scipy==1.17.1
-tqdm==4.67.3
-rich==14.3.3
-
-python-multipart==0.0.22
-typing_extensions==4.15.0
-
-en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
 
 fastapi==0.135.2
 uvicorn==0.42.0
