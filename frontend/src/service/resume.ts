@@ -5,7 +5,7 @@ export const uploadResume = async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await fetch("http://127.0.0.1:8000/api/upload-resume", {
+    const response = await fetch("https://resumeiq-606i.onrender.com/api/upload-resume", {
       method: "POST",
       body: formData,
     });
