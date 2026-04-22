@@ -46,7 +46,7 @@ const Index = () => {
     const handleUnload = () => {
       if (resumeId) {
         navigator.sendBeacon(
-          `http://127.0.0.1:8000/api/resume/${resumeId}`
+          `https://resumeiq-606i.onrender.com.onrender.com/api/resume/${resumeId}`
         );
       }
     };
@@ -129,7 +129,7 @@ const Index = () => {
   const runRoleMatch = async () => {
     if (!resumeId) return;
     try {
-      const data = await getRequest(`http://127.0.0.1:8000/api/recommend-roles/${resumeId}`);
+      const data = await getRequest(`https://resumeiq-606i.onrender.com/api/recommend-roles/${resumeId}`);
 
       const mapped = data.recommended_roles.map((r: any) => ({
         role: r.role,
@@ -169,7 +169,7 @@ const Index = () => {
     setSelectedRole(role);
 
     const data = await postRequest(
-      `http://127.0.0.1:8000/api/evaluate-role/${resumeId}`,
+      `https://resumeiq-606i.onrender.com/api/evaluate-role/${resumeId}`,
       { role }
     );
 
@@ -220,7 +220,7 @@ const Index = () => {
       () => {
         if (resumeId) {
         navigator.sendBeacon(
-          `http://127.0.0.1:8000/api/resume/${resumeId}`
+          `https://resumeiq-606i.onrender.com/api/resume/${resumeId}`
         );
       }
         setResumeId(null);
